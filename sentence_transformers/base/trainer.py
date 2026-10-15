@@ -76,7 +76,7 @@ except ImportError:
     TrackioCallback = None
 
 
-class _OptimizerGradientCallback(TrainerCallback):
+class _OptimizerZeroGradCallback(TrainerCallback):
     """Clear loss-owned gradients that the Transformers model.zero_grad() calls cannot reach."""
 
     def on_train_begin(self, args, state, control, optimizer, **kwargs) -> None:
@@ -346,7 +346,7 @@ class BaseTrainer(Trainer, ABC):
             self.eval_dataset = self.preprocess_dataset(eval_dataset, dataset_name="eval")
         self._eval_dataloaders: dict[str, DataLoader] = {}
         self.add_model_card_callback(default_args_dict)
-        self.add_callback(_OptimizerGradientCallback())
+        self.add_callback(_OptimizerZeroGradCallback())
 
     def get_data_collator(
         self,

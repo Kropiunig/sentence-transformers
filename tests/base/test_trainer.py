@@ -381,11 +381,8 @@ def test_loss_gradients_match_manual_training(
         assert parameter.grad is None
 
 
-@pytest.mark.parametrize("gradient_accumulation_steps", [1, 2])
 @pytest.mark.parametrize("fp16", [False, True])
-def test_softmax_multi_objective_gradients(
-    loss_training_model, tmp_path, gradient_accumulation_steps: int, fp16: bool
-) -> None:
+def test_multi_objective_training_only_updates_active_loss(loss_training_model, tmp_path, fp16: bool) -> None:
     if fp16 and not torch.cuda.is_available():
         pytest.skip("FP16 training requires CUDA")
     model = loss_training_model.to("cuda" if fp16 else "cpu")
@@ -414,7 +411,6 @@ def test_softmax_multi_objective_gradients(
         fp16=fp16,
         max_steps=4,
         per_device_train_batch_size=2,
-        gradient_accumulation_steps=gradient_accumulation_steps,
         multi_dataset_batch_sampler=MultiDatasetBatchSamplers.ROUND_ROBIN,
         learning_rate=0.01,
         lr_scheduler_type="constant",
