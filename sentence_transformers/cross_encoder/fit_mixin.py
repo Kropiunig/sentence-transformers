@@ -154,7 +154,7 @@ class FitMixinLoss(nn.Module):
     ) -> Tensor:
         if len(inputs) != 2:
             raise ValueError(
-                f"BinaryCrossEntropyLoss expects a dataset with two non-label columns, but got a dataset with {len(inputs)} columns."
+                f"{self.loss_fct} expects a dataset with two non-label columns, but got a dataset with {len(inputs)} columns."
             )
 
         pairs = list(zip(inputs[0], inputs[1]))

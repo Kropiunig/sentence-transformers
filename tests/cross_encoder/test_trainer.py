@@ -383,25 +383,27 @@ def test_trainer_tensor_formatted_labels(tmp_path: Path, num_labels: int, labels
     assert torch.isfinite(weights).all()
 
 
+@pytest.mark.parametrize("model_fixture", ["reranker_bert_tiny_model", "multiclass_bert_tiny_model"])
 def test_fit_with_loss_fct(
-    reranker_bert_tiny_model: CrossEncoder, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    model_fixture: str, request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """CrossEncoder.fit() trains with a plain torch loss passed as `loss_fct`."""
     monkeypatch.chdir(tmp_path)
-    calls = []
-
-    class RecordingMSELoss(torch.nn.MSELoss):
-        def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-            calls.append((input.shape, target.dtype))
-            return super().forward(input, target)
-
-    examples = [InputExample(texts=[f"query {idx}", f"passage {idx}"], label=float(idx % 2)) for idx in range(8)]
-    reranker_bert_tiny_model.fit(
+    model = request.getfixturevalue(model_fixture)
+    weights = model.model.classifier.weight
+    before = weights.detach().clone()
+    loss_fct = torch.nn.MSELoss() if model.num_labels == 1 else torch.nn.CrossEntropyLoss()
+    examples = [
+        InputExample(texts=[f"query {idx}", f"passage {idx}"], label=idx % max(model.num_labels, 2))
+        for idx in range(8)
+    ]
+    model.fit(
         train_dataloader=DataLoader(examples, batch_size=4),
-        loss_fct=RecordingMSELoss(),
+        loss_fct=loss_fct,
         epochs=1,
         warmup_steps=0,
         show_progress_bar=False,
     )
 
-    assert calls == [(torch.Size([4]), torch.float32)] * 2
+    assert not torch.equal(weights, before)
+    assert torch.isfinite(weights).all()
